@@ -57,7 +57,6 @@ router.get('/', async (req, res) => {
       searchFilter = {
         $or: [
           { name: searchRegex },
-          { idCardNo: searchRegex },
           { guardianName: searchRegex },
           { houseName: searchRegex },
           { houseNo: searchRegex },
