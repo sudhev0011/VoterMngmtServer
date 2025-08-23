@@ -7,8 +7,23 @@ const cookieParser = require('cookie-parser');
 dotenv.config();
 const app = express();
 
+const allowedDomains = [process.env.CLIENT_URL, process.env.CLIENT_URL_2]
+
 app.use(cors({
-  origin: process.env.CLIENT_URL,
+  origin: function (origin, callback){
+
+    if(!origin){
+      return callback(null, true);
+    }
+
+    if(allowedDomains.contain(origin)){
+      return callback(null, true);
+    }else{
+      return callback(new Error('Domain not allowed by CORS'),false);
+    }
+
+
+  },
   credentials: true
 }));
 app.use(express.json());
