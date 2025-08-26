@@ -5,11 +5,13 @@ const User = require('../models/User');
 const { auth } = require('../middleware/auth');
 const generateToken = require('../utils/jwt');
 const setCookie = require('../utils/setCookie');
+const {OAuth2Client} = require('google-auth-library');
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 //register
 router.post('/register', async(req,res)=>{
   const {username, password, confirmPassword} = req.body;
-  console.log('got hit',password,confirmPassword)
 
   if(!username.trim() || !password.trim()) return res.status(400).json({message: 'No Valid username or password found'});
   if(password?.trim() !== confirmPassword?.trim()) return res.status(400).json({message: 'The passwords doesnt match'})
@@ -36,17 +38,46 @@ router.post('/login', async (req, res) => {
     
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
-    console.log('one',{ userId: user._id, role: user.role })
     const token = await generateToken({ userId: user._id, role: user.role });
-    console.log('two')
     setCookie(token,res);
-    console.log('three')
 
     res.json({ role: user.role, userId: user._id, isAuthenticated: true });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+//GoogleAuth
+router.post('/google', async(req, res)=>{
+  const {token} = req.body
+  try {
+    if(token){
+      const ticket = await client.verifyIdToken({
+        idToken: token,
+        audience: process.env.GOOGLE_CLIENT_ID
+      });
+
+      const payload = ticket.getPayload();
+      let user = await User.findOne({username: payload.email});
+
+      if(!user){
+        user = await User.create({
+          username: payload.email,
+          role: 'user'
+        })
+      }
+
+      const jwtToken = generateToken({userId: user._id, role: user.role})
+      setCookie(jwtToken, res);
+      res.status(200).json({userId: user._id, role: user.role, isAuthenticated: true})
+    }else{
+      res.status(400).json({success:false, message: 'Token not found'});
+    }
+
+  } catch (error) {
+    res.status(400).json({message: error.message});
+  }
+})
 
 // Check auth
 router.get('/check', auth, async (req, res) => {
