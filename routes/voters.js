@@ -3,28 +3,6 @@ const router = express.Router();
 const Voter = require('../models/Voter');
 const { auth, isAdmin } = require('../middleware/auth');
 
-// Get all voters with sorting support (public access)
-// router.get('/', async (req, res) => {
-//   try {
-//     const { sortBy = 'serialNo', sortOrder = 'asc' } = req.query;
-    
-//     // Validate sortBy field
-//     const allowedSortFields = ['serialNo', 'name', 'guardianName', 'houseNo', 'houseName', 'genderAge', 'idCardNo'];
-//     const validSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'serialNo';
-    
-//     // Validate sortOrder
-//     const validSortOrder = sortOrder === 'desc' ? -1 : 1;
-    
-//     // Create sort object
-//     const sortObject = { [validSortBy]: validSortOrder };
-    
-//     const voters = await Voter.find().sort(sortObject);
-//     res.json(voters);
-//   } catch (err) {
-//     res.status(500).json({ message: err.message });
-//   }
-// });
-
 router.get('/', async (req, res) => {
   try {
     const { 
@@ -73,7 +51,8 @@ router.get('/', async (req, res) => {
     const voters = await Voter.find(searchFilter)
       .sort(sortObject)
       .skip(skip)
-      .limit(pageSize);
+      .limit(pageSize)
+      .lean(); // Use lean for better performance
     
     // Return paginated response
     res.json({
@@ -88,7 +67,8 @@ router.get('/', async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
